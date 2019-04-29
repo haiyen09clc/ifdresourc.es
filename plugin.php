@@ -41,6 +41,8 @@ if (!class_exists('IZW_Auto_Complete')) {
             add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'change_text_add_to_cart_button'), 10, 2 );
         }
     }
+
+
     function check_order_limit($posted, $errors_obj){
         $errors = array();
         //get order items
@@ -224,6 +226,61 @@ if (!class_exists('IZW_Auto_Complete')) {
         $product->update_meta_data('_variations',   $product_variations);
 
         $product->save();
+    }
+    function styling_admin_order_list() {
+        global $pagenow, $post;
+        echo '<style>.orderlimits_tab a::before{content: "\f508"!important;} </style>';
+        if( $pagenow != 'edit.php') return; // Exit
+        if( get_post_type($post->ID) != 'shop_order' ) return; // Exit
+        $statuses = alg_get_custom_order_statuses();
+        foreach ( $statuses as $slug => $label ) {
+            $custom_order_status = substr( $slug, 3 );
+            if ( '' != ( $icon_data = get_option( 'alg_orders_custom_status_icon_data_' . $custom_order_status, '' ) ) ) {
+                $color      = $icon_data['color'];
+                $text_color = ( isset( $icon_data['text_color'] ) ? $icon_data['text_color'] : '#000000' );
+            } else {
+                $color      = '#999999';
+                $text_color = '#000000';
+            }
+            echo '<style>.wc-action-button.' . $custom_order_status . ' { color: ' . $text_color . '; background-color: ' . $color . ' }</style>';
+        }
+        // HERE we set your custom status
+        $order_status = 'processing'; // <==== HERE
+        ?>
+        <style>
+            .order-status.status-<?php echo sanitize_title( $order_status ); ?> {
+                background: #ff2600;
+                color: #fff;
+            }
+            .wc-action-button-group .wc-action-button{
+                padding: 10px 15px!important;
+                margin: 10px 10px!important;
+            }
+        </style>
+
+        <?php if (isset($_GET['preview_order'])):?>
+            <script type="text/javascript">
+                jQuery(document).ready(function () {
+                    jQuery('body').append('<a href="#" id="custom_preview_order" class="order-preview" data-order-id="<?php echo $_GET['preview_order'];?>" title="Preview" style="display: none;">Preview Order</a>');
+                    setTimeout(function () {
+                        jQuery('#custom_preview_order').click();
+
+                    }, 1000);
+
+                    jQuery('body').on('click','.wc-action-button', function (e) {
+                        e.preventDefault();
+                        jQuery.get(jQuery(this).attr('href'), function( data ) {
+                            alert( "Order status updated successfully!" );
+                            location.reload();
+                        });
+                        return false;
+                    });
+                });
+            </script>
+        <?php
+        endif;
+
+
     }
     function wp_footer(){
         if( is_checkout() ){
