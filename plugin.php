@@ -42,7 +42,16 @@ if (!class_exists('IZW_Auto_Complete')) {
         }
     }
 
+    function change_text_add_to_cart_button( $button, $product  ) {
+        $product_fields = wcff()->dao->load_fields_for_product($product->get_id(), 'wccpf');
 
+        if(!empty($product_fields)){
+            $button_text = __("Select options", "woocommerce");
+            $button = '<a class="button" href="' . $product->get_permalink() . '">' . $button_text . '</a>';
+        }
+        return $button;
+    }
+    
     function check_order_limit($posted, $errors_obj){
         $errors = array();
         //get order items
