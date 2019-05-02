@@ -17,8 +17,7 @@ License: GPL 2
 if (!class_exists('IZW_Auto_Complete')) {
     class IZW_Auto_Complete
     {
-        function __construct()
-        {
+        function __construct(){
             add_action( 'wp_enqueue_scripts', array( $this, 'front_scripts' ) );
             add_action( 'wp_footer', array( $this, 'wp_footer') );
             add_action( 'woocommerce_before_save_order_items', array( $this, 'woocommerce_before_save_order_items') ,10 ,2);
@@ -35,13 +34,43 @@ if (!class_exists('IZW_Auto_Complete')) {
             add_action( 'wp_ajax_check_order_limit', array( $this,'check_order_limit') );
             add_action( 'wp_ajax_nopriv_check_order_limit', array( $this,'check_order_limit') );
             add_filter( 'woocommerce_product_data_tabs',array( $this,'custom_product_tabs'));
-            add_filter( 'woocommerce_product_data_panels',array( $this,'order_limits_product_tab_content'));
-            add_action( 'woocommerce_process_product_meta', array( $this,'save_order_limits_fields'  ));
+            add_filter( 'woocommerce_product_data_panels',array( $this,'custom_product_tab_content'));
+            add_action( 'woocommerce_process_product_meta', array( $this,'save_custom_fields'  ));
             add_action( 'woocommerce_after_checkout_validation', array( $this, 'check_order_limit' ), 10, 2 );
-            add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'change_text_add_to_cart_button'), 10, 2 );
+            add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'change_text_add_to_cart_button'), 20, 2 );
+            add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'modify_add_to_cart_button'), 10, 2 );
+            add_action( 'woocommerce_single_product_summary', array( $this,'hide_add_to_cart_button' ));
         }
+
+    }
+    // change text add to cart button corresponding to input text field in modify cart button tab
+    function modify_add_to_cart_button( $button, $product){
+
+        if(!empty($product->get_meta('_cart_button_text'))){
+            $text = $product->get_meta('_cart_button_text');
+            $button_text = __($text, "woocommerce");
+
+            //check if product is simple and text is add to cart, if true, add product to cart with quantity is 1
+            // if not, redirect to product page
+            if($text =="Add to cart" && $product->is_type('simple')){
+                $button = '<a class="button product_type_simple add_to_cart_button ajax_add_to_cart" href="'.site_url().'/?add-to-cart='.$product->get_id().'" data-quantity="1" data-product_id = "'.$product->get_id().'" data-product_sku aria-label="Add '.$product->get_title().' to your cart"">' . $button_text . '</a>';
+            }else{
+                $button = '<a class="button" href="' . $product->get_permalink() . '">' . $button_text . '</a>';
+
+            }
+        }
+        return $button;
     }
 
+    function hide_add_to_cart_button (){
+        global $product;
+        if ($product->get_meta( '_hide_cart_button' ) == 'yes') {
+            echo '<style> .single_add_to_cart_button {display: none!important;}</style>';
+        }
+
+    }
+
+    // change text add to cart button for product applied field factory
     function change_text_add_to_cart_button( $button, $product  ) {
         $product_fields = wcff()->dao->load_fields_for_product($product->get_id(), 'wccpf');
 
@@ -51,6 +80,7 @@ if (!class_exists('IZW_Auto_Complete')) {
         }
         return $button;
     }
+
     
     function check_order_limit($posted, $errors_obj){
         $errors = array();
@@ -151,12 +181,21 @@ if (!class_exists('IZW_Auto_Complete')) {
     }
 
     /**
-     * Add tab 'order_limits to product data.
+     * Add tab custom tab to product data.
      */
     function custom_product_tabs( $tabs) {
+        // add order limits tab
         $tabs['orderlimits'] = array(
             'label'		=> __( 'Order Limits', 'woocommerce' ),
             'target'	=> 'order_limits',
+            'class'		=> array( 'show_if_simple', 'show_if_variable'  ),
+
+        );
+
+        // add modify cart button tab
+        $tabs['cartbutton'] = array(
+            'label'		=> __( 'Modify Cart Button', 'woocommerce' ),
+            'target'	=> 'modify_cart_button',
             'class'		=> array( 'show_if_simple', 'show_if_variable'  ),
 
         );
@@ -164,12 +203,14 @@ if (!class_exists('IZW_Auto_Complete')) {
     }
 
     /**
-     * Contents of the order limit product tab.
+     * Contents of custom product tab.
      */
-    function order_limits_product_tab_content() {
+    function custom_product_tab_content() {
         global $post;
 
         ?>
+        <!--Contents of the order limit product tab-->
+
         <div id="order_limits" class="panel woocommerce_options_panel">
             <?php
 
@@ -211,16 +252,40 @@ if (!class_exists('IZW_Auto_Complete')) {
             echo '</div>';
             ?>
         </div>
+
+        <!--Contents of the modify cart button product tab-->
+
+        <div id="modify_cart_button" class="panel woocommerce_options_panel">
+            <?php
+
+            // Note the 'id' attribute needs to match the 'target' parameter set above
+
+            woocommerce_wp_checkbox( array(
+                'id' 		=> '_hide_cart_button',
+                'label' 	=> __( 'Hide Cart Button', 'woocommerce' ),
+                'description' => ' hide cart button in product page',
+            ) );
+
+            woocommerce_wp_text_input( array(
+                'id' 		=> '_cart_button_text',
+                'label' 	=> __( 'Button text', 'woocommerce' ),
+                // 'default' => 'More info',
+                'required' => 'true',
+            ) );
+
+            ?>
+        </div>
         <?php
     }
 
     /**
      * Save the custom fields.
      */
-    function save_order_limits_fields( $post_id ) {
-
+    function save_custom_fields( $post_id ) {
 
         $product = wc_get_product( $post_id );
+
+        // save custom fields for order limit tabs
 
         $product_rules = isset( $_POST['_product_rules'] ) ? 'yes' : 'no';
         $product->update_meta_data( '_product_rules', $product_rules );
@@ -233,6 +298,14 @@ if (!class_exists('IZW_Auto_Complete')) {
 
         $product_variations = isset( $_POST['_variations'] ) ? 'yes' : 'no';
         $product->update_meta_data('_variations',   $product_variations);
+
+        // save custom fields for modify cart button tabs
+
+        $hide_cart_button = isset( $_POST['_hide_cart_button'] ) ? 'yes' : 'no';
+        $product->update_meta_data( '_hide_cart_button', $hide_cart_button );
+
+        $cart_button_text = $_POST[ '_cart_button_text' ];
+        $product->update_meta_data('_cart_button_text',   $cart_button_text);
 
         $product->save();
     }
@@ -280,6 +353,8 @@ if (!class_exists('IZW_Auto_Complete')) {
     function styling_admin_order_list() {
         global $pagenow, $post;
         echo '<style>.orderlimits_tab a::before{content: "\f508"!important;} </style>';
+        echo '<style>.cartbutton_tab a::before{content: "\f07a"!important; font-family: FontAwesome!important;} </style>';
+
         if( $pagenow != 'edit.php') return; // Exit
         if( get_post_type($post->ID) != 'shop_order' ) return; // Exit
         $statuses = alg_get_custom_order_statuses();
