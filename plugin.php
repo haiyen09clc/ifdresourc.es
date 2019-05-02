@@ -291,7 +291,67 @@ if (!class_exists('IZW_Auto_Complete')) {
 
 
     }
-    
+
+    function styling_login_page(){
+        $url = $_SERVER['REQUEST_URI'];
+        if (strpos( $url, 'preview_order')!==false) {
+            setcookie( 'custom_redirect', $_REQUEST['redirect_to'], time() + 600, COOKIEPATH, COOKIE_DOMAIN );
+            ?>
+            <style type="text/css">
+                #user_login, .forgetmenot, label[for=user_login], #nav, #backtoblog {
+                    display: none;
+                }
+            </style>
+            <script type="text/javascript">
+                r(function(){
+                    document.getElementById('user_pass').type = 'number';
+                    document.getElementById('user_pass').setAttribute("pattern","[0-9]*");
+                });
+                function r(f){/in/.test(document.readyState)?setTimeout('r('+f+')',9):f()}
+
+
+            </script>
+            <?php
+        }
+    }
+
+    function replace_qr_code($text, $text_format, $order){
+        // check qr tag
+        if ( strpos($text, 'qr_preview') !== false ) {
+            // build qr code image url
+            $site_url = home_url();
+            if (strpos($_SERVER['HTTP_HOST'],'staging')!==false) {
+                $site_url = 'https://staging6.ifdresourc.es/qm';
+            }
+            $qr_address = $site_url."/wp-admin/edit.php?post_type=shop_order&preview_order=".$order->get_id();
+            $qr_data = urlencode( trim( preg_replace('#<br\s*/?>#i', "\n", $qr_address) ) );
+
+            $size = '100';
+
+            $qr_url = "https://chart.googleapis.com/chart?chs={$size}x{$size}&cht=qr&chl={$qr_data}&choe=UTF-8";
+            //$qr_url = "http://open.visualead.com/?data={$qr_data}&size={$size}&type=png";
+
+            // create image tag
+            $qr_image = sprintf('<img src="%s" class="qr-code" />', $qr_url);
+            // replace qr_code placeholder
+            $text = str_replace('qr_preview', $qr_image, $text);
+        }
+        return $text;
+    }
+
+    function wc_renaming_order_status( $order_statuses ) {
+        if (is_admin()) {
+            foreach ( $order_statuses as $key => $status ) {
+                if ( 'wc-processing' === $key )
+                    $order_statuses['wc-processing'] = _x( 'New', 'Order status', 'woocommerce' );
+            }
+        }
+
+        return $order_statuses;
+    }
+
+
+
     function woocommerce_before_delete_order_item( $item_id ){
         if ( ! $item = WC_Order_Factory::get_order_item( absint( $item_id ) ) ) {
             return;
