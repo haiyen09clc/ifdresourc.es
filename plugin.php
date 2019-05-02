@@ -291,6 +291,13 @@ if (!class_exists('IZW_Auto_Complete')) {
 
 
     }
+
+    function front_scripts(){
+        if( is_checkout() ){
+            wp_enqueue_style( 'autocomplete', '//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css' );
+            wp_enqueue_script( 'jquery-ui-autocomplete' );
+        }
+    }
     function wp_footer(){
         if( is_checkout() ){
             $table = TablePress::$model_table->load( 8, true, true );
