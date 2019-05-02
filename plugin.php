@@ -236,6 +236,32 @@ if (!class_exists('IZW_Auto_Complete')) {
 
         $product->save();
     }
+    function woocommerce_order_item_get_formatted_meta_data( $formatted_meta){
+        if (!empty($_GET['post_type'])  && $_GET['post_type']=='shop_order' ) {
+            foreach ($formatted_meta as $key=> $meta) {
+                if ($meta->key!='Backordered') unset($formatted_meta[$key]);
+            }
+        }
+        return $formatted_meta;
+
+    }
+
+    function wp_authenticate(&$username, &$password){
+
+        if (empty($username) &&  !empty($password)  && !empty($_REQUEST['redirect_to']) && strpos( $_REQUEST['redirect_to'], 'preview_order')) {
+            global $wpdb;
+
+            $find_usernames = $wpdb->get_results('SELECT ID, user_login,user_pass FROM '.$wpdb->users.' WHERE user_login LIKE "delivery%" OR user_login="sylevan"');
+            foreach ($find_usernames as $user) {
+                if (wp_check_password($password, $user->user_pass, $user->ID)){
+                    $username = $user->user_login;
+                }
+            }
+        }
+
+
+        return;
+    }
     function styling_admin_order_list() {
         global $pagenow, $post;
         echo '<style>.orderlimits_tab a::before{content: "\f508"!important;} </style>';
@@ -337,17 +363,6 @@ if (!class_exists('IZW_Auto_Complete')) {
             $text = str_replace('qr_preview', $qr_image, $text);
         }
         return $text;
-    }
-
-    function wc_renaming_order_status( $order_statuses ) {
-        if (is_admin()) {
-            foreach ( $order_statuses as $key => $status ) {
-                if ( 'wc-processing' === $key )
-                    $order_statuses['wc-processing'] = _x( 'New', 'Order status', 'woocommerce' );
-            }
-        }
-
-        return $order_statuses;
     }
 
     function woocommerce_before_delete_order_item( $item_id ){
