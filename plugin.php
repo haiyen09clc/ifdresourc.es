@@ -236,6 +236,21 @@ if (!class_exists('IZW_Auto_Complete')) {
 
         $product->save();
     }
+
+    /**
+     * Renaming order status: processing-> new.
+     */
+    function wc_renaming_order_status( $order_statuses ) {
+        if (is_admin()) {
+            foreach ( $order_statuses as $key => $status ) {
+                if ( 'wc-processing' === $key )
+                    $order_statuses['wc-processing'] = _x( 'New', 'Order status', 'woocommerce' );
+            }
+        }
+
+        return $order_statuses;
+    }
+
     function woocommerce_order_item_get_formatted_meta_data( $formatted_meta){
         if (!empty($_GET['post_type'])  && $_GET['post_type']=='shop_order' ) {
             foreach ($formatted_meta as $key=> $meta) {
