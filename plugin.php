@@ -350,8 +350,6 @@ if (!class_exists('IZW_Auto_Complete')) {
         return $order_statuses;
     }
 
-
-
     function woocommerce_before_delete_order_item( $item_id ){
         if ( ! $item = WC_Order_Factory::get_order_item( absint( $item_id ) ) ) {
             return;
