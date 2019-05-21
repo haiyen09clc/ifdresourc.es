@@ -43,6 +43,7 @@ if (!class_exists('IZW_Auto_Complete')) {
         }
 
     }
+
     // change text add to cart button corresponding to input text field in modify cart button tab
     function modify_add_to_cart_button( $button, $product){
 
@@ -81,31 +82,38 @@ if (!class_exists('IZW_Auto_Complete')) {
         return $button;
     }
 
-    
     function check_order_limit($posted, $errors_obj){
         $errors = array();
         //get order items
         if ( ! WC()->cart->is_empty() ) {
             $product_ids = array();
+            $check_exist_variation = array();
             foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
                 $product = wc_get_product($cart_item['product_id']);
                 //variation_id -> red clothes, product_id -> clothes
                 if ($product->get_meta( '_product_rules' ) == 'yes') {
                     if (isset($cart_item['variation_id']) && $product->get_meta('_variations') == 'no') {
-                        $product_ids[] = $cart_item['variation_id'];
+                        $product_ids = $cart_item['variation_id'];
                         $check_id = $cart_item['variation_id'];
+                        $purchase_data[$check_id]['qty'] = $cart_item['quantity'];
+
                     } else {
-                        $product_ids[] = $cart_item['product_id'];
                         $check_id = $cart_item['product_id'];
+                        $product_ids[] = $cart_item['product_id'];
+
+                        if (array_key_exists($check_id,$check_exist_variation)){
+                            $check_exist_variation[$check_id]['pdt_qty'] =  $check_exist_variation[$check_id]['pdt_qty'] + $cart_item['quantity'];
+                        }else{
+                            $check_exist_variation[$check_id]['pdt_qty'] = $cart_item['quantity'];
+                        }
+                        $purchase_data[$check_id]['qty'] = $check_exist_variation[$check_id]['pdt_qty'];
                     }
 
-                    //$purchase_data[$cart_item['product_id']]['qty'] = $cart_item['quantity'];
                     $purchase_data[$check_id]['allow'] = $product->get_meta('_product_quantity');
                     $purchase_data[$check_id]['month'] = $product->get_meta('_month');
                     $purchase_data[$check_id]['variations'] = $product->get_meta('_variations');
-                    $purchase_data[$check_id]['qty'] = $cart_item['quantity'];
                     $purchase_data[$check_id]['remain'] = (int)$purchase_data[$check_id]['allow'] - $purchase_data[$check_id]['qty'];
-                    // echo $purchase_data[$check_id]['remain'];
+
                     if ($purchase_data[$check_id]['remain']<0){
                         $errors_obj->add( 'validation', sprintf( __( 'Pemmission denied. Per our rules you can buy %s %s per %s month(s)!', 'woocommerce' ), '<strong>' .$purchase_data[$check_id]['allow'] . '</strong>','<strong>' . $product->get_name(). '</strong>','<strong>' .$purchase_data[$check_id]['month']. '</strong>' ) );
                     }
@@ -139,8 +147,6 @@ if (!class_exists('IZW_Auto_Complete')) {
                     }elseif (in_array($variation_id, $product_ids)) {
                         $check_id = $variation_id;
                     } else continue;
-
-
 
                     $order_date         = $order->get_date_created()->getTimestamp();
                     $months             = $purchase_data[$check_id]['month'];
