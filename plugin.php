@@ -40,8 +40,242 @@ if (!class_exists('IZW_Auto_Complete')) {
             add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'change_text_add_to_cart_button'), 20, 2 );
             add_filter( 'woocommerce_loop_add_to_cart_link', array( $this,'modify_add_to_cart_button'), 10, 2 );
             add_action( 'woocommerce_single_product_summary', array( $this,'hide_add_to_cart_button' ));
+            add_action( 'wp_footer', array( $this, 'psid_search_order_autocomple') );
+            add_shortcode('order_search_box', array( $this,'wc_get_customer_orders'));
+            add_shortcode('status-bubble-number',array($this,'count_order_by_status'));
         }
 
+    }
+    function count_order_by_status($status){
+
+        global $wpdb;
+
+        if($status['status']=='wc-on-hold') {
+            $orders = $wpdb->get_col('SELECT ID FROM ' . $wpdb->posts . ' WHERE post_status ="' . $status['status'] . '" AND date(post_date)>=date_sub(now(), interval 3 month) ');
+        }else{
+            $orders = $wpdb->get_col('SELECT ID FROM ' . $wpdb->posts . ' WHERE post_status ="' . $status['status'] . '" AND date(post_date)>=date_sub(now(), interval 30 day) ');
+        }
+
+        $number =count($orders);
+
+
+        echo "<div class='table-today-order' style='display:none;'>";
+        if (!empty($orders)) {
+            if(current_user_can('administrator')){
+                $user_role='admin';
+                $table_name = '\'today-order '.$status['status'].' admin\'';
+            }else{
+                $user_role='normal';
+                $table_name = '\'today-order '.$status['status'].' normal\'';
+            }
+            echo "<table class=$table_name>";
+
+            echo "<tr>
+                        <th style='width:4%;'>Order date</th>
+                        <th style='width:7%;'>Order Status</th>
+                        <th style='width:7%;'>Name</th>
+                        <th style='width:10ch;'>Order details</th>
+                        <th style='width:10ch;'>Customer Note</th>";
+            if($user_role=='normal') {
+                echo "<th style='width:5%;'>Deliver to</th>
+                          <th style='width:5%;'>Shift</th>";
+            }
+            if($user_role=='admin') {
+                echo "<th style ='width:5%;'>Action</th >";
+            }
+            echo "</tr>";
+
+            foreach ($orders as $order_id) {
+                $order = wc_get_order($order_id);
+                $order_date = $order->get_date_created()->date('m-d-Y');
+                $order_status = $order->get_status();
+                $order_status_name = wc_get_order_status_name('wc-' . $order_status);
+                $custom_note = $order->customer_message;
+                $shift = $order->get_meta('_billing_shift');
+                $class_style_status = 'status-'.$order_status;
+                echo "<tr>
+                          <td>" . $order_date . "</td>";
+                if($order_status_name=='Processing'){
+                    echo "<td><mark class='block_status_name $class_style_status'><span>New</span></mark></td>";
+                }else {
+                    echo "<td><mark class='block_status_name $class_style_status'><span>$order_status_name</span></mark></td>";
+                }
+                echo  "<td class='customer_name_row'>"."#". $order->get_id() ." ".$order->get_billing_first_name()."</td>";
+                echo "<td class='product_name'>";
+
+                //get products of order
+                foreach ($order->get_items() as $item) {
+                    if (!$item->is_type('line_item')) {
+                        continue;
+                    }
+                    if ($item->get_name() == 'Gloves - Fire') {
+                        echo $item->get_quantity() . "x <span>" . $item->get_name() . "<br> Glove Choice: " . $item->get_meta('glove-choice') . "<br> Size: " . $item->get_meta('size-fire-gloves') . "</span>";
+                    } else {
+                        echo $item->get_quantity() . "x <span>" . $item->get_name() . "</span>";
+                    }
+                    echo "<br>";
+
+                }
+                echo "</td><td>" . $custom_note . "</td>";
+                if($user_role=='normal'){
+                    echo "<td>" . $order->get_meta('_billing_station') . "</td>
+                                      <td>" . $shift . "</td>";
+                }
+                if($user_role=='admin') {
+                    $print_label_url="#";
+                    $id=$order->get_id();
+                    echo "<td><a href='$print_label_url' class='button wclabels-single' targer='_blank' alt='Print Address Labels' data-id='$id'>
+                                          <img src='https://staging8.ifdresourc.es/qm/wp-content/uploads/2019/05/icons8-print-24.png'></a></td>";
+                }
+                echo "</tr>";
+            }
+
+        }
+        echo "</table>";
+        echo "</div>";
+
+
+        if(!empty($orders)) {
+            ?>
+            <script type="text/javascript">
+                jQuery(document).ready(function ($) {
+                    $( '#<?php echo $status['status'];?>' ).wrap("<a class='popup-table' href='.<?php echo $status['status'];?>'></a>" );
+
+                    $('.popup-table').magnificPopup({
+                        type: 'inline',
+                        preloader: false,
+                    });
+
+                });
+
+            </script>
+            <?php
+        }
+        return $number;
+    }
+
+    function wc_get_customer_orders() {
+        //get orders of that $name
+        global $wpdb;
+        if(isset($_GET['order-search-box'])) {
+            $name = $_GET['order-search-box'];
+            $orders = $wpdb->get_col('SELECT post_id FROM ' . $wpdb->postmeta . '  INNER JOIN ' . $wpdb->posts . ' ON ID=post_id  WHERE meta_key="_billing_first_name" AND meta_value="' . $name . '" AND date(post_date)>=date_sub(now(), interval 6 month) ORDER BY meta_id DESC');
+            $previous_id = 1;
+
+            //loop to get all products from orders
+            if (!empty($orders)) {
+                echo "<div class='table-history-order' style='display:none;'>";
+                echo "<button id='close'>x</button>";
+                echo "<table class='history-order'>";
+                echo "<tr>
+                                <th style='width:4%;'>Order date</th>
+                                <th style='width:7%;'>Order Status</th>
+                                <th style='width:7%;'>Order id</th>
+                                <th style='width:10ch;'>Order details</th>
+                                <th style='width:10ch;'>Customer Note</th>                               
+                                <th style='width:5%;'>Shift</th>                        
+                          </tr>";
+
+                foreach ($orders as $order_id) {
+                    $order = wc_get_order($order_id);
+
+                    $order_date = $order->get_date_created()->date('m-d-Y');
+                    $order_status = $order->get_status();
+                    $order_status_name = wc_get_order_status_name('wc-' . $order_status);
+                    $custom_note = $order->customer_message;
+                    $shift = $order->get_meta('_billing_shift');
+                    $class_style_status = 'status-' . $order_status;
+                    echo "<tr>
+                              <td class='order_date_row'>" . $order_date . "</td>";
+                    if ($order_status_name == 'Processing') {
+                        echo "<td><mark class='block_status_name $class_style_status'><span>New</span></mark></td>";
+                    } else {
+                        echo "<td><mark class='block_status_name $class_style_status'><span>$order_status_name</span></mark></td>";
+                    }
+                    echo "<td class='customer_name_row'>" . "#" . $order->get_id() . " " . $order->get_billing_first_name() . "</td>";
+                    echo "<td class='product_name'>";
+
+                    //get products of order
+                    foreach ($order->get_items() as $item) {
+                        if (!$item->is_type('line_item')) {
+                            continue;
+                        }
+                        if ($item->get_name() == 'Gloves - Fire') {
+                            echo $item->get_quantity() . "x <span>" . $item->get_name() . "<br> Glove Choice: " . $item->get_meta('glove-choice') . "<br> Size: " . $item->get_meta('size-fire-gloves') . "</span>";
+                        } else {
+                            echo $item->get_quantity() . "x <span>" . $item->get_name() . "</span>";
+                        }
+                        echo "<br>";
+
+                    }
+                    echo "</td><td>" . $custom_note . "</td><td>" . $shift . "</td></tr>";
+                }
+                echo "</table>";
+                echo "<button id='close'>Close table</button>";
+                echo "</div>";
+
+                ?>
+                <script type="text/javascript">
+                    jQuery(document).ready(function ($) {
+
+                        $('#order-search-box').attr('value', '<?php echo $name; ?>');
+                        $('.order-input-field').after($('.table-history-order'));
+                        $('.table-history-order').show();
+                        jQuery('body').on('click', '#close', function (e) {
+                            $('.table-history-order').hide();
+                        });
+
+                    });
+                </script>
+                <?php
+
+            }else{
+                ?>
+                <script type="text/javascript">
+                    jQuery(document).ready(function ($) {
+                        $('#order-search-box').attr('value','<?php echo $name; ?>');
+                        $('<p>No data available for the last 6 months<p>').insertAfter('.order-input-field');
+                    });
+                </script>
+                <?php
+            }
+        }
+
+    }
+
+
+    function psid_search_order_autocomple()
+    {
+        if (is_page('Today\'s Order Board')) {
+            $table = TablePress::$model_table->load(8, true, true);
+            $string = array();
+            if (sizeof($table['data']) > 1) {
+                $i = 0;
+                foreach ($table['data'] as $v) {
+                    if ($i != 0 && !empty($v[0])) {
+                        $string[] = "\"$v[0]\"";
+                    }
+                    $i++;
+                }
+            }
+            ?>
+            <script type="text/javascript">
+                jQuery(document).ready(function ($) {
+                    var availableTags = [<?php echo implode(",", $string); ?>];
+                    $("#order-search-box").autocomplete({
+                        source: availableTags,
+                        change: function (event, ui) {
+                            if (ui.item === null) {
+                                $("#order-search-box").val("");
+                            }
+
+                        }
+                    });
+                });
+            </script>
+            <?php
+
+        }
     }
 
     // change text add to cart button corresponding to input text field in modify cart button tab
@@ -621,6 +855,53 @@ if (!class_exists('IZW_Auto_Complete')) {
         if( is_checkout() ){
             wp_enqueue_style( 'autocomplete', '//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css' );
             wp_enqueue_script( 'jquery-ui-autocomplete' );
+        }
+        if (is_page('Today\'s Order Board')) {
+            wp_enqueue_style(
+                'wclabels-admin-styles', // handle
+                plugins_url( '/woocommerce-address-labels/css/wclabels-admin-styles.css' ), // source
+                array(), // dependencies
+                '1.5.5', // version
+                'all' // media
+            );
+            wp_enqueue_style(
+                'iz-styles', // handle
+                plugins_url( '/assets/style.css', __FILE__ )
+            );
+            wp_enqueue_style(
+                'magnifict', // handle
+                plugins_url( '/assets/magnific-popup.css', __FILE__ )
+            );
+
+            wp_enqueue_script(
+                'magnifict',
+                plugins_url( '/assets/jquery.magnific-popup.min.js', __FILE__ ),
+                array( 'jquery' ),
+                '1.5.5' //version
+            );
+
+
+            wp_register_script(
+                'wclabels-print',
+                plugins_url( '/woocommerce-address-labels/js/wclabels-print.js' ),
+                array( 'jquery' ),
+                '1.5.5' //version
+            );
+            wp_enqueue_script( 'wclabels-print' );
+
+            wp_localize_script(
+                'wclabels-print',
+                'wclabels',
+                array(
+                    'ajaxurl'		=> admin_url( 'admin-ajax.php' ), // URL to WordPress ajax handling page
+                    'nonce'			=> wp_create_nonce( 'wpo_wclabels_print' ),
+                    'preview'		=> isset($this->interface_settings['preview'])? 'true' : 'false',
+                    'offset'		=> isset($this->interface_settings['offset'])?1:'',
+                    'offset_icon'	=> plugins_url( '/woocommerce-address-labels/wclabels-offset-icon.png' ),
+                    'offset_label'	=> __( 'Labels to skip', 'wpo_wclabels' ),
+                    'post_type'		=> 'shop_order',
+                )
+            );
         }
     }
     function wp_footer(){
