@@ -672,6 +672,21 @@ if (!class_exists('IZW_Auto_Complete')) {
     }
 
     function replace_qr_code($text, $text_format, $order){
+
+        if ( strpos($text, 'Gloves - Fire')) {
+            $items = $order->get_items();
+            $addition = '';
+            foreach( $items as $item_id => $item ) {
+                $product = $item->get_product();
+
+                if($product->get_name()=='Gloves - Fire'){
+                    $addition = "<br> - Glove Choice: " . $item->get_meta('glove-choice') . "<br> - Size: " . $item->get_meta('size-fire-gloves');
+                }
+            }
+
+            $text = str_replace('Gloves - Fire', 'Gloves - Fire'. $addition, $text);
+        }
+
         // check qr tag
         if ( strpos($text, 'qr_preview') !== false ) {
             // build qr code image url
