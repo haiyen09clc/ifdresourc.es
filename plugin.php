@@ -369,7 +369,7 @@ if (!class_exists('IZW_Auto_Complete')) {
 
                 //get products of order
                 foreach ( $order->get_items() as $item ) {
-                    if ( ! $item->is_type( 'line_item' ) ) {
+                    if ( ! $item->is_type( 'line_item' ) || !$item->get_product()) {
                         continue;
                     }
 
@@ -852,7 +852,7 @@ if (!class_exists('IZW_Auto_Complete')) {
     }
 
     function front_scripts(){
-        if( is_checkout() ){
+        if( is_checkout() || is_page('Today\'s Order Board') ){
             wp_enqueue_style( 'autocomplete', '//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css' );
             wp_enqueue_script( 'jquery-ui-autocomplete' );
         }
@@ -921,7 +921,7 @@ if (!class_exists('IZW_Auto_Complete')) {
             <script type="text/javascript">
                 jQuery(document).ready(function($){
                     var availableTags = [<?php echo implode( ",", $string ); ?>];
-                    $( "#billing_first_name" ).autocomplete({
+                    $( "#billing_first_name" ).val("").autocomplete({
                         source: availableTags,
                         change: function (event, ui) {
                             if(ui.item === null){
