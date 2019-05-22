@@ -1,0 +1,178 @@
+.today-order, .history-order{
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+    font-weight: 400;
+    border: 1px solid #CCC;
+    table-layout:fixed;
+}
+
+.today-order thead,th ,.history-order thead,th{
+    color:#0073aa;
+    font-size: 14px;
+    font-weight: 400;
+    border-width:0px 0 1px 0;
+    border-style:solid;
+    border-color:#CCC;
+}
+
+
+.today-order td ,.history-order td{
+    font-size: 12px;
+    border:none;
+    line-height: 26px;
+}
+
+.today-order tr:nth-child(odd) ,.history-order tr:nth-child(odd){
+    background:#f1f1f1;
+}
+
+.today-order tr:nth-child(even) ,.history-order tr:nth-child(even){
+    background:#ffffff;
+}
+
+.customer_name_row{
+    color:#0073aa;
+    font-weight: 600;
+}
+.product_name>span{
+    color:#0073aa;
+    font-weight: 600;
+}
+
+.block_status_name{
+    display: inline-flex;
+    text-align:center;
+    border-radius: 4px;
+    line-height: 2.5em;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    margin: 0 1em;
+    white-space: nowrap;
+    max-width: 100%;
+
+}
+.block_status_name>span {
+    margin: 0 1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+mark.block_status_name.status-delivered {
+
+    color: #ffffff;
+    background-color: #008f00;
+
+}
+
+mark.block_status_name.status-out-for-delivery {
+    color: #ffffff;
+    background-color: #000000;
+
+}
+
+mark.block_status_name.status-processing {
+
+    background: #ff2600;
+    color: #fff;
+
+}
+mark.block_status_name.status-ready-delivery {
+    color: #ffffff;
+    background-color: #aa7942;
+
+}
+mark.block_status_name.status-on-hold-custom{
+
+    color: #000000;
+    background-color: #f27900;
+
+}
+
+mark.block_status_name.status-trash {
+
+    background: #eba3a3;
+    color: #761919;
+
+}
+mark.block_status_name.status-picked-up {
+
+    color: #ffffff;
+    background-color: #999999;
+
+}
+
+
+#close {
+    display:inline-block;
+    padding:2px 5px;
+    background:#ccc;
+}
+
+#close:hover {
+    display:inline-block;
+    padding:2px 5px;
+    background:#ccc;
+    color:#fff;
+}
+@media
+only screen and (max-width: 760px),
+(min-device-width: 768px) and (max-device-width: 1024px)  {
+
+    /* Force table to not be like tables anymore */
+    .today-order thead, tbody, th, td, tr, .history-order thead, tbody, th, td, tr{
+        display: block;
+    }
+
+    /* Hide table headers (but not display: none;, for accessibility) */
+    .today-order thead,th, .history-order thead,th{
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    .today-order tr, .history-order tr{ border: 1px solid #ccc; }
+
+    .today-order td, .history-order td {
+        /* Behave  like a "row" */
+        border: none;
+
+        position: relative;
+        padding-left: 50%;
+    }
+
+    .history-order td:before, .today-order td:before{
+        /* Now like a table header */
+        position: absolute;
+        /* Top/left values mimic padding */
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+    }
+    .history-order td:nth-of-type(1):before { content: "Order date"; }
+    .history-order td:nth-of-type(2):before { content: "Order status"; }
+    .history-order td:nth-of-type(3):before { content: "Order id"; }
+    .history-order td:nth-of-type(4):before { content: "Order details";}
+    .history-order td:nth-of-type(5):before { content: "Customer note"; }
+    .history-order td:nth-of-type(6):before { content: "Shift"; }
+
+    .admin td:nth-of-type(1):before { content: "Order date"; }
+    .admin td:nth-of-type(2):before { content: "Order status"; }
+    .admin td:nth-of-type(3):before { content: "Name"; }
+    .admin td:nth-of-type(4):before { content: "Order details";}
+    .admin td:nth-of-type(5):before { content: "Customer note"; }
+    .admin td:nth-of-type(6):before { content: "Action";}
+
+    .normal td:nth-of-type(1):before { content: "Order date"; }
+    .normal td:nth-of-type(2):before { content: "Order status"; }
+    .normal td:nth-of-type(3):before { content: "Name"; }
+    .normal td:nth-of-type(4):before { content: "Order details";}
+    .normal td:nth-of-type(5):before { content: "Customer note"; }
+    .normal td:nth-of-type(6):before { content: "Deliver to"; }
+    .normal td:nth-of-type(7):before { content: "Shift"; }
+}
+.ui-widget li{
+    font-family:"Open Sans",sans-serif;
+}
+.ui-autocomplete .ui-state-focus {
+    border: 0 !important;
+    background: #c8c8c8 !important;
+}
